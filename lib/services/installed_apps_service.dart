@@ -27,26 +27,28 @@ class InstalledAppsService {
       final apps = <AppInfo>[];
 
       for (final item in appsList) {
-        final map = item as Map<String, dynamic>;
-        final packageName = map['packageName'] as String;
-        final appName = map['appName'] as String? ?? packageName;
-        final iconBytes = map['iconBytes'] as List<dynamic>?;
+        // MethodChannel 返回 Map<Object?, Object?>, 需要用 Map.from 安全转换
+        final rawMap = Map<String, dynamic>.from(item as Map);
+        final packageName = rawMap['packageName'] as String? ?? '';
+        if (packageName.isEmpty) continue;
+        final appName = rawMap['appName'] as String? ?? packageName;
+
+        // 处理图标字节（来自平台的 List<int>）
+        final iconBytes = rawMap['iconBytes'];
+        final bytesList = (iconBytes is List ? List<int>.from(iconBytes as List) : null);
 
         // 保存图标到缓存
         String? iconPath;
-        if (iconBytes != null && iconBytes.isNotEmpty) {
-          iconPath = await IconCacheService.saveIcon(
-            packageName,
-            iconBytes.cast<int>(),
-          );
+        if (bytesList != null && bytesList.isNotEmpty) {
+          iconPath = await IconCacheService.saveIcon(packageName, bytesList);
         }
 
         apps.add(AppInfo(
           packageName: packageName,
           appName: appName,
-          versionName: map['versionName'] as String? ?? '',
-          versionCode: (map['versionCode'] as num?)?.toInt() ?? 0,
-          isSystemApp: map['isSystemApp'] as bool? ?? false,
+          versionName: rawMap['versionName'] as String? ?? '',
+          versionCode: (rawMap['versionCode'] as num?)?.toInt() ?? 0,
+          isSystemApp: rawMap['isSystemApp'] is bool ? (rawMap['isSystemApp'] as bool) : false,
           iconPath: iconPath,
         ));
       }
@@ -67,7 +69,8 @@ class InstalledAppsService {
         'packageName': packageName,
       });
       if (result == null) return null;
-      return (result as List<dynamic>).cast<int>().toList() as Uint8List?;
+      final bytes = List<int>.from(result as List);
+      return Uint8List.fromList(bytes);
     } catch (e) {
       return null;
     }
