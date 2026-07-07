@@ -97,13 +97,13 @@ class MainActivity : FlutterActivity() {
 
             try {
                 val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+                    pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0L))
                 } else {
                     @Suppress("DEPRECATION")
                     pm.getPackageInfo(packageName, 0)
                 }
 
-                val applicationInfo = packageInfo.applicationInfo
+                val applicationInfo = packageInfo.applicationInfo ?: continue
                 val isSystemApp = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
 
                 if (!includeSystemApps && isSystemApp) continue
@@ -132,15 +132,16 @@ class MainActivity : FlutterActivity() {
         return try {
             val drawable: Drawable?
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val icon = packageManager.getPackageInfo(
+                val info = packageManager.getPackageInfo(
                     packageName,
-                    PackageManager.PackageInfoFlags.of(PackageManager.GET_ACTIVITIES)
-                ).applicationInfo?.loadIcon(packageManager)
-                drawable = icon
+                    PackageManager.PackageInfoFlags.of(PackageManager.GET_ACTIVITIES.toLong())
+                ).applicationInfo
+                drawable = info?.loadIcon(packageManager)
             } else {
                 @Suppress("DEPRECATION")
-                drawable = packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
-                    .applicationInfo?.loadIcon(packageManager)
+                val info = packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+                    .applicationInfo
+                drawable = info?.loadIcon(packageManager)
             }
 
             if (drawable == null) return null
